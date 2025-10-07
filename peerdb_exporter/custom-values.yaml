@@ -1,0 +1,33 @@
+# Example custom values file for Helm deployment
+# Save this as custom-values.yaml and use: helm install peerdb-exporter ./peerdb_exporter -f custom-values.yaml
+
+image:
+  repository: your-registry/peerdb-exporter  # Update to your actual image
+  tag: "v1.0.0"                             # Update to your actual tag
+
+# Method 1: Direct environment variables (not recommended for sensitive data)
+env:
+  PEERDB_HOST: "production-db.example.com"
+  PEERDB_PORT: "5432"
+  PEERDB_USERNAME: "peerdb_readonly"
+  PEERDB_PASSWORD: "your-password-here"      # Better to use secrets instead
+  PEERDB_DATABASE: "peerdb_stats"
+
+# Method 2: Using Kubernetes Secrets (recommended for sensitive data)
+# Comment out the env section above and uncomment this:
+# env:
+#   PEERDB_HOST: "production-db.example.com"
+#   PEERDB_PORT: "5432"
+#   PEERDB_DATABASE: "peerdb_stats"
+# 
+# envFrom:
+#   - secretRef:
+#       name: peerdb-secrets  # Contains PEERDB_USERNAME and PEERDB_PASSWORD
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi

@@ -7,11 +7,26 @@ replicaCount: 1
 
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
-  repository: nginx
+  repository: peerdb-exporter  # Update this to your actual image repository
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
+  tag: "latest"
+
+# Environment variables for the application
+env:
+  # PeerDB connection configuration
+  PEERDB_HOST: "your-actual-db-host"          # Replace with your actual host
+  PEERDB_PORT: "5432"
+  PEERDB_USERNAME: "your-actual-username"     # Replace with your actual username  
+  PEERDB_PASSWORD: "your-actual-password"     # Replace with your actual password (better to use secrets)
+  PEERDB_DATABASE: "peerdb_stats"
+
+# External secrets or configmaps to inject environment variables from
+# This allows you to use Kubernetes Secrets or ConfigMaps for sensitive data
+envFrom:
+  - secretRef:
+      name: peerdb-secrets
 
 # This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
 imagePullSecrets: []
