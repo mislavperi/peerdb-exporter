@@ -135,9 +135,9 @@ func (e *PeerDBExporter) collectReplicationMetrics() error {
 
 	for rows.Next() {
 		var flowName string
-		var sourceLSN, targetLSN, lastSyncTimestamp *int64
+		var sourceLSN, targetLSN *int64
 
-		err := rows.Scan(&flowName, &sourceLSN, &targetLSN, &lastSyncTimestamp)
+		err := rows.Scan(&flowName, &sourceLSN, &targetLSN)
 		if err != nil {
 			log.Printf("Error scanning replication row: %v", err)
 			continue
@@ -147,10 +147,6 @@ func (e *PeerDBExporter) collectReplicationMetrics() error {
 		if sourceLSN != nil && targetLSN != nil {
 			lag := float64(*sourceLSN - *targetLSN)
 			e.replicationLag.WithLabelValues("", flowName).Set(lag)
-		}
-
-		if lastSyncTimestamp != nil {
-			e.lastSyncTime.WithLabelValues("", flowName).Set(float64(*lastSyncTimestamp))
 		}
 	}
 
