@@ -3,7 +3,7 @@ name: Build and release Docker image
 on:
   push:
     tags:
-      - 'docker-*'
+      - 'v*'
 
 jobs:
   build:
@@ -18,15 +18,16 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Extract docker version from tag
+    - name: Extract version from tag
       id: version
       run: |
-        echo "DOCKER_VERSION=${GITHUB_REF#refs/tags/docker-}" >> $GITHUB_OUTPUT
+        TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+        echo "DOCKER_VERSION=${TAG_VERSION}" >> $GITHUB_OUTPUT
 
-    - name: Get previous docker tag
+    - name: Get previous Docker tag
       id: prevtag
       run: |
-        PREVTAG=$(git tag --sort=-creatordate | grep '^docker-' | grep -v "${GITHUB_REF#refs/tags/}" | head -n1)
+        PREVTAG=$(git tag --sort=-creatordate | grep '^v' | grep -v "${GITHUB_REF#refs/tags/}" | head -n1)
         echo "PREVTAG=$PREVTAG" >> $GITHUB_OUTPUT
 
     - name: Generate Docker changelog
@@ -40,11 +41,6 @@ jobs:
         git log $RANGE --pretty=format:"* %s" --invert-grep --grep='\[HELM\]$' > CHANGELOG.docker.md
         cat CHANGELOG.docker.md
 
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: 1.25
-
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
@@ -55,13 +51,12 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GH_TOKEN }}
 
-    - name: Build and tag Docker image
+    - name: Build and push Docker image
       run: |
-        export tag_version=${{ steps.version.outputs.DOCKER_VERSION }}
         IMAGE_ID=ghcr.io/mislavperi/peerdb-exporter
-
-        docker build --build-arg "BUILD_VERSION=${tag_version}" --tag ${IMAGE_ID}:${tag_version} --tag ${IMAGE_ID}:latest .
-        docker push ${IMAGE_ID}:${tag_version}
+        VERSION=${{ steps.version.outputs.DOCKER_VERSION }}
+        docker build --build-arg "BUILD_VERSION=${VERSION}" --tag ${IMAGE_ID}:${VERSION} --tag ${IMAGE_ID}:latest .
+        docker push ${IMAGE_ID}:${VERSION}
         docker push ${IMAGE_ID}:latest
 
     - name: Create GitHub Release with changelog
@@ -71,4 +66,4 @@ jobs:
         name: Docker Release ${{ steps.version.outputs.DOCKER_VERSION }}
         body_path: CHANGELOG.docker.md
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
