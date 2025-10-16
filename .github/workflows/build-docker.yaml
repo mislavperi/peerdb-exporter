@@ -1,53 +1,49 @@
 name: Build and release Docker image
 
-on:
+'on':
   push:
-    branches:
-      - release
-
+    tags:
+    - '*-*'
 jobs:
-  release:
+  build:
     runs-on: ubuntu:latest
     permission:
       content: write
       packages: write
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: release
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-      - name: Set up Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: 1.25
+    - name: Get version from tag
+      run: |
+        set -x
+        echo "BUILD_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+      id: version
 
-      - name: Setup and run semantic-release
-        uses: go-semantic-release/action@v1
-        with:
-          hooks: goreleaser
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.25
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GH_TOKEN }}
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GH_TOKEN }}
 
-      - name: Build and push Docker image
-        if: env.VERSION != ''
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: |
-            ghcr.io/international-dance-open-zagreb/ido-backend:${{ env.VERSION }}
-            ghcr.io/international-dance-open-zagreb/ido-backend:latest
+    - name: Build Dockerfile
+      uses: ubuntu-22.04
+      run: |
+        export tag_version=${{ steps.version.outputs.BUILD_VERSION }}
+        docker build --build-arg "BUILD_VERSION=${tag_version}" --tag mislavperi/peerdb-exporter:${tag_version} .
+        docker tag mislavperi/peerdb-exporter:latest mislavperi/peerdb-exporter:${tag_version}
+
+        docker push mislavperi/peerdb-exporter:${tag_version}
+        docker push mislavperi/peerdb-exporter:latest
