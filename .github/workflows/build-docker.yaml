@@ -7,7 +7,7 @@ name: Build and release Docker image
 jobs:
   build:
     runs-on: ubuntu:latest
-    permission:
+    permissions:
       content: write
       packages: write
 
@@ -39,7 +39,6 @@ jobs:
         password: ${{ secrets.GH_TOKEN }}
 
     - name: Build Dockerfile
-      uses: ubuntu-22.04
       run: |
         export tag_version=${{ steps.version.outputs.BUILD_VERSION }}
         docker build --build-arg "BUILD_VERSION=${tag_version}" --tag mislavperi/peerdb-exporter:${tag_version} .
