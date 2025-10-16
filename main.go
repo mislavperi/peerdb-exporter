@@ -33,13 +33,15 @@ func main() {
 	log.Printf("Successfully connected to database")
 	peerDBExporter := peerdb.NewPeerDBExporter(dbConnection)
 
-	// Start collecting metrics in background
 	peerDBExporter.StartMetricsCollection(time.Second * 30)
 
 	mux := http.NewServeMux()
-	
-	// Serve Prometheus metrics using the standard handler
+
 	mux.Handle("/metrics", promhttp.Handler())
+	mux.HandleFunc("/health", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+	})
 
 	log.Printf("Starting PeerDB Exporter on port 8001")
 	log.Printf("Metrics available at: http://localhost:8001/metrics")

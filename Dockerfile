@@ -1,12 +1,5 @@
 FROM golang:1.25.1-alpine3.22 AS builder
 
-# Build-time environment variables (not set, just declared for build context)
-ARG PEERDB_HOST
-ARG PEERDB_PORT
-ARG PEERDB_USERNAME
-ARG PEERDB_PASSWORD
-ARG PEERDB_DATABASE
-
 ARG SHA1="[no-sha]"
 ARG TAG="[no-tag]"
 ARG TARGETOS
@@ -24,10 +17,6 @@ RUN BUILD_DATE=$(date +%F-%T) CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH
     -ldflags  "-s -w -extldflags \"-static\" -X main.BuildVersion=$TAG -X main.BuildCommitSha=$SHA1 -X main.BuildDate=$BUILD_DATE" .
 
 FROM alpine:3.21 AS runner
-
-# Runtime environment variables that can be overridden when container starts
-# These are the variables your Go app expects to read
-ENV PEERDB_DATABASE="peerdb_stats"
 
 COPY --from=builder /peerdb_exporter /peerdb_exporter
 
