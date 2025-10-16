@@ -1,9 +1,10 @@
-name: Build and release Docker image
+name: Build and release helm chart
 
-'on':
+on:
   push:
     tags:
-    - '*'
+      - 'helm-*'
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,11 +18,27 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Get version from tag
-      run: |
-        set -x
-        echo "BUILD_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+    - name: Extract helm version from tag
       id: version
+      run: |
+        echo "HELM_VERSION=${GITHUB_REF#refs/tags/helm-}" >> $GITHUB_OUTPUT
+
+    - name: Get previous helm tag
+      id: prevtag
+      run: |
+        PREVTAG=$(git tag --sort=-creatordate | grep '^helm-' | grep -v "${GITHUB_REF#refs/tags/}" | head -n1)
+        echo "PREVTAG=$PREVTAG" >> $GITHUB_OUTPUT
+
+    - name: Generate Helm changelog
+      id: changelog
+      run: |
+        if [ -z "${{ steps.prevtag.outputs.PREVTAG }}" ]; then
+          RANGE=""
+        else
+          RANGE="${{ steps.prevtag.outputs.PREVTAG }}..${GITHUB_REF#refs/tags/}"
+        fi
+        git log $RANGE --pretty=format:"* %s" --grep='\[HELM\]$' > CHANGELOG.helm.md
+        cat CHANGELOG.helm.md
 
     - name: Set up Go
       uses: actions/setup-go@v3
@@ -38,7 +55,11 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GH_TOKEN }}
 
-    - name: Build Dockerfile
-      run: |
-        export tag_version=${{ steps.version.outputs.BUILD_VERSION }}
-        echo ${tag_version}
+    - name: Create GitHub Release with changelog
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: Helm Release ${{ steps.version.outputs.HELM_VERSION }}
+        body_path: CHANGELOG.helm.md
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
