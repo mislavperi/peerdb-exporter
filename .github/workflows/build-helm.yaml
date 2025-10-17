@@ -56,7 +56,7 @@ jobs:
     - name: Push Helm chart to GHCR
       run: |
         CHART_VERSION=${{ steps.chart_version.outputs.HELM_VERSION }}
-        helm push peerdb-exporter-${CHART_VERSION}.tgz oci://ghcr.io/mislavperi
+        helm push peerdb-exporter-${CHART_VERSION}.tgz oci://ghcr.io/mislavperi/helm
 
     - name: Create GitHub Release with changelog
       uses: softprops/action-gh-release@v2
