@@ -51,7 +51,7 @@ jobs:
 
     - name: Package Helm chart
       run: |
-        helm package ./charts/peerdb-exporter --version ${{ steps.chart_version.outputs.HELM_VERSION }}
+        helm package ./charts/peerdb-exporter 
 
     - name: Push Helm chart to GHCR
       run: |
