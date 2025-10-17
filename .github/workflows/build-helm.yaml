@@ -28,7 +28,7 @@ jobs:
     - name: Extract Helm chart version
       id: chart_version
       run: |
-        VERSION=$(grep '^version:' ./charts/peerdb-exporter/Chart.yaml | awk '{print $2}')
+        VERSION=$(grep '^version:' ./chart/Chart.yaml | awk '{print $2}')
         echo "HELM_VERSION=${VERSION}" >> $GITHUB_OUTPUT
 
     - name: Get previous Helm chart version tag (helm-*)
