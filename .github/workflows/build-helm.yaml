@@ -51,7 +51,7 @@ jobs:
 
     - name: Package Helm chart
       run: |
-        helm package ./charts/peerdb-exporter 
+        helm package ./chart 
 
     - name: Push Helm chart to GHCR
       run: |
