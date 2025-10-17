@@ -7,7 +7,7 @@ replicaCount: 1
 
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
-  repository: peerdb-exporter  # Update this to your actual image repository
+  repository: ghcr.io/mislavperi/peerdb-exporter  # Update this to your actual image repository
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
