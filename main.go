@@ -15,11 +15,11 @@ import (
 func main() {
 	ferrite.Init()
 	databaseDetails := postgres.PGConnectionDetails{
-		Host:     config.PeerDBHost.Value(),
-		Port:     config.PeerDBPort.Value(),
-		Username: config.PeerDBUsername.Value(),
-		Password: config.PeerDBPassword.Value(),
-		Database: config.PeerDBDatabase.Value(),
+		Host:     config.Host.Value(),
+		Port:     config.Port.Value(),
+		Username: config.Username.Value(),
+		Password: config.Password.Value(),
+		Database: config.Database.Value(),
 	}
 
 	log.Printf("Connecting to database: %s:%d/%s", databaseDetails.Host, databaseDetails.Port, databaseDetails.Database)
