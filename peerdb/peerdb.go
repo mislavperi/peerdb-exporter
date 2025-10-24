@@ -244,6 +244,7 @@ GROUP BY cb.batch_id, cb.flow_name, cbt.destination_table_name;
 		if delta > 0 {
 			e.rowsSynced.WithLabelValues(batchID, flowName, tableName).Add(float64(delta))
 		}
+		fmt.Println(e.rowsSynced)
 	}
 
 	return rows.Err()
