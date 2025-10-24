@@ -11,7 +11,8 @@ import (
 )
 
 type PeerDBExporter struct {
-	db *pgxpool.Pool
+	db                 *pgxpool.Pool
+	lastReportedTotals map[string]int64
 
 	replicationLag      *prometheus.GaugeVec
 	rowsSynced          *prometheus.CounterVec
@@ -27,7 +28,8 @@ type PeerDBExporter struct {
 
 func NewPeerDBExporter(pgpool *pgxpool.Pool) *PeerDBExporter {
 	exporter := &PeerDBExporter{
-		db: pgpool,
+		db:                 pgpool,
+		lastReportedTotals: make(map[string]int64),
 		replicationLag: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Name: "peerdb_replication_lag_seconds",
@@ -40,7 +42,7 @@ func NewPeerDBExporter(pgpool *pgxpool.Pool) *PeerDBExporter {
 				Name: "peerdb_rows_synced_total",
 				Help: "Total number of rows synced per table",
 			},
-			[]string{"peer_name", "flow_name", "table_name"},
+			[]string{"batch_id", "flow_name", "table_name"},
 		),
 		syncErrors: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
@@ -196,9 +198,9 @@ func (e *PeerDBExporter) collectBatchMetrics() error {
 }
 
 func (e *PeerDBExporter) collectTableMetrics() error {
-	// Use cdc_batch_table for per-table row counts
 	query := `
 SELECT
+		cb.batch_id,
     cb.flow_name,
     cbt.destination_table_name,
     COALESCE(SUM(cbt.num_rows), 0) AS total_rows
@@ -215,7 +217,7 @@ JOIN (
     ) t
     WHERE rn = 1
 ) cb ON cb.batch_id = cbt.batch_id
-GROUP BY cb.flow_name, cbt.destination_table_name;
+GROUP BY cb.batch_id, cb.flow_name, cbt.destination_table_name;
 	`
 
 	rows, err := e.db.Query(context.Background(), query)
@@ -225,16 +227,23 @@ GROUP BY cb.flow_name, cbt.destination_table_name;
 	defer rows.Close()
 
 	for rows.Next() {
-		var flowName, tableName string
+		var batchID, flowName, tableName string
 		var totalRows int64
 
-		err := rows.Scan(&flowName, &tableName, &totalRows)
+		err := rows.Scan(&batchID, &flowName, &tableName, &totalRows)
 		if err != nil {
 			log.Printf("Error scanning table metrics row: %v", err)
 			continue
 		}
 
-		e.rowsSynced.WithLabelValues("", flowName, tableName).Add(float64(totalRows))
+		key := fmt.Sprintf("%s|%s|%s", batchID, flowName, tableName)
+		lastTotal := e.lastReportedTotals[key]
+		delta := totalRows - lastTotal
+
+		// Only add positive deltas
+		if delta > 0 {
+			e.rowsSynced.WithLabelValues(batchID, flowName, tableName).Add(float64(delta))
+		}
 	}
 
 	return rows.Err()
