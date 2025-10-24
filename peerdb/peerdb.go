@@ -202,7 +202,6 @@ func (e *PeerDBExporter) collectTableMetrics() error {
 			cbt.destination_table_name,
 			COALESCE(SUM(cbt.num_rows), 0) as total_rows
 		FROM peerdb_stats.cdc_batch_table cbt
-		WHERE cb.start_time > NOW() - INTERVAL '24 hours'
 	`
 
 	rows, err := e.db.Query(context.Background(), query)
