@@ -198,14 +198,24 @@ func (e *PeerDBExporter) collectBatchMetrics() error {
 func (e *PeerDBExporter) collectTableMetrics() error {
 	// Use cdc_batch_table for per-table row counts
 	query := `
-		
-SELECT 
+SELECT
     cb.flow_name,
-    COALESCE(SUM(cbt.num_rows), 0) AS total_rows_synced
+    cbt.destination_table_name,
+    COALESCE(SUM(cbt.num_rows), 0) AS total_rows
 FROM peerdb_stats.cdc_batch_table cbt
-JOIN peerdb_stats.cdc_batches cb ON cbt.batch_id = cb.batch_id
-GROUP BY cb.flow_name
-ORDER BY total_rows_synced DESC;
+JOIN (
+    SELECT batch_id, flow_name, start_time
+    FROM (
+        SELECT
+            batch_id,
+            flow_name,
+            start_time,
+            ROW_NUMBER() OVER (PARTITION BY batch_id ORDER BY start_time DESC) AS rn
+        FROM peerdb_stats.cdc_batches
+    ) t
+    WHERE rn = 1
+) cb ON cb.batch_id = cbt.batch_id
+GROUP BY cb.flow_name, cbt.destination_table_name;
 	`
 
 	rows, err := e.db.Query(context.Background(), query)
