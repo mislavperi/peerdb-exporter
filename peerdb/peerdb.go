@@ -240,11 +240,10 @@ GROUP BY cb.batch_id, cb.flow_name, cbt.destination_table_name;
 		lastTotal := e.lastReportedTotals[key]
 		delta := totalRows - lastTotal
 
-		// Only add positive deltas
 		if delta > 0 {
 			e.rowsSynced.WithLabelValues(batchID, flowName, tableName).Add(float64(delta))
+			e.lastReportedTotals[key] = totalRows
 		}
-		fmt.Println(e.rowsSynced)
 	}
 
 	return rows.Err()
