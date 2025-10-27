@@ -194,9 +194,9 @@ SELECT
         ELSE 0 
     END as throughput
 FROM peerdb_stats.cdc_batches
-AND end_time IS NOT NULL
+WHERE end_time IS NOT NULL
 ORDER BY end_time DESC
-LIMIT 500
+LIMIT 500;
 	`
 
 	rows, err := e.db.Query(context.Background(), query)
