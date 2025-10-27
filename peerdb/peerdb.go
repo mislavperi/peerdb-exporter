@@ -113,6 +113,7 @@ func NewPeerDBExporter(pgpool *pgxpool.Pool) *PeerDBExporter {
 	prometheus.MustRegister(
 		exporter.replicationLag,
 		exporter.rowsSynced,
+		exporter.rowsSynced24Hours,
 		exporter.syncErrors,
 		exporter.syncThroughput,
 		exporter.peerStatus,
