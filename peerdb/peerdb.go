@@ -74,7 +74,7 @@ func NewPeerDBExporter(pgpool *pgxpool.Pool) *PeerDBExporter {
 				Name: "peerdb_flows_details",
 				Help: "List of flows and their status",
 			},
-			[]string{"name", "source_peer", "destination_peer", "flow_status", "status"},
+			[]string{"name", "source_peer", "destination_peer", "status"},
 		),
 		peers: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
@@ -465,7 +465,7 @@ func (e *PeerDBExporter) collectPeers() error {
 	query := `
 		SELECT
 			name,
-			type,
+			type
 		FROM
 			public.peers
 	`
@@ -497,7 +497,6 @@ func (e *PeerDBExporter) collectFlows() error {
 			name,
 			source_peer,
 			destination_peer,
-			flow_status,
 			status
 		FROM
 			public.flows
@@ -511,15 +510,15 @@ func (e *PeerDBExporter) collectFlows() error {
 
 	for rows.Next() {
 		var name, sourcePeer, destinationPeer string
-		var flowStatus, status int
+		var status int
 
-		err := rows.Scan(&name, &sourcePeer, &destinationPeer, &flowStatus, &status)
+		err := rows.Scan(&name, &sourcePeer, &destinationPeer, &status)
 		if err != nil {
-			log.Printf("Error scanning for alerts: %v", err)
+			log.Printf("Error scanning for flows: %v", err)
 			return err
 		}
 
-		e.flows.WithLabelValues(name, sourcePeer, destinationPeer, strconv.Itoa(flowStatus), strconv.Itoa(status))
+		e.flows.WithLabelValues(name, sourcePeer, destinationPeer, strconv.Itoa(status))
 	}
 	return rows.Err()
 }
