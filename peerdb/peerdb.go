@@ -16,7 +16,7 @@ type PeerDBExporter struct {
 
 	replicationLag      *prometheus.GaugeVec
 	rowsSynced          *prometheus.CounterVec
-	rowsSynced24Hours   *prometheus.CounterVec
+	rowsSynced24Hours   *prometheus.GaugeVec
 	syncErrors          *prometheus.CounterVec
 	syncThroughput      *prometheus.GaugeVec
 	peerStatus          *prometheus.GaugeVec
@@ -45,10 +45,10 @@ func NewPeerDBExporter(pgpool *pgxpool.Pool) *PeerDBExporter {
 			},
 			[]string{"batch_id", "flow_name", "table_name"},
 		),
-		rowsSynced24Hours: prometheus.NewCounterVec(
-			prometheus.CounterOpts{
+		rowsSynced24Hours: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
 				Name: "peerdb_rows_synced_24_hours",
-				Help: "Total number of rows synced per table",
+				Help: "Total number of rows synced per table in the last 24 hours",
 			},
 			[]string{"batch_id", "flow_name", "table_name"},
 		),
@@ -298,14 +298,7 @@ GROUP BY cb.batch_id, cb.flow_name, cbt.destination_table_name;
 			continue
 		}
 
-		key := fmt.Sprintf("%s|%s|%s", batchID, flowName, tableName)
-		lastTotal := e.lastReportedTotals[key]
-		delta := totalRows - lastTotal
-
-		if delta > 0 {
-			e.rowsSynced24Hours.WithLabelValues(batchID, flowName, tableName).Add(float64(delta))
-			e.lastReportedTotals[key] = totalRows
-		}
+		e.rowsSynced24Hours.WithLabelValues(batchID, flowName, tableName).Set(float64(totalRows))
 	}
 
 	return rows.Err()
