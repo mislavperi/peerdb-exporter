@@ -216,7 +216,7 @@ LIMIT 500;
 			continue
 		}
 
-		e.batchProcessingTime.WithLabelValues("", strconv.Itoa(int(batchID)), flowName).Set(processingTime)
+		e.batchProcessingTime.WithLabelValues(strconv.Itoa(int(batchID)), flowName).Set(processingTime)
 		e.syncThroughput.WithLabelValues("", strconv.Itoa(int(batchID)), flowName).Set(throughput)
 	}
 
