@@ -385,7 +385,7 @@ func (e *PeerDBExporter) collectQRepMetrics() error {
 			continue
 		}
 
-		e.qrepPartitionStatus.WithLabelValues(flowName, partitionID).Set(completedStatus)
+		e.qrepPartitionStatus.WithLabelValues("", flowName, partitionID).Set(completedStatus)
 
 		if completedStatus == 0 {
 			e.pendingRows.WithLabelValues("", flowName, "qrep_partition").Set(float64(numRows))
