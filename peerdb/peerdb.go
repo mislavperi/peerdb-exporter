@@ -16,6 +16,7 @@ type PeerDBExporter struct {
 
 	replicationLag      *prometheus.GaugeVec
 	rowsSynced          *prometheus.CounterVec
+	rowsSynced24Hours   *prometheus.CounterVec
 	syncErrors          *prometheus.CounterVec
 	syncThroughput      *prometheus.GaugeVec
 	peerStatus          *prometheus.GaugeVec
@@ -40,6 +41,13 @@ func NewPeerDBExporter(pgpool *pgxpool.Pool) *PeerDBExporter {
 		rowsSynced: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "peerdb_rows_synced_total",
+				Help: "Total number of rows synced per table",
+			},
+			[]string{"batch_id", "flow_name", "table_name"},
+		),
+		rowsSynced24Hours: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "peerdb_rows_synced_24_hours",
 				Help: "Total number of rows synced per table",
 			},
 			[]string{"batch_id", "flow_name", "table_name"},
@@ -249,6 +257,59 @@ GROUP BY cb.batch_id, cb.flow_name, cbt.destination_table_name;
 	return rows.Err()
 }
 
+func (e *PeerDBExporter) collectSyncedRows24Hours() error {
+	query := `
+SELECT
+		cb.batch_id,
+    cb.flow_name,
+    cbt.destination_table_name,
+    COALESCE(SUM(cbt.num_rows), 0) AS total_rows
+FROM peerdb_stats.cdc_batch_table cbt
+JOIN (
+    SELECT batch_id, flow_name, start_time
+    FROM (
+        SELECT
+            batch_id,
+            flow_name,
+            start_time,
+            ROW_NUMBER() OVER (PARTITION BY batch_id ORDER BY start_time DESC) AS rn
+        FROM peerdb_stats.cdc_batches
+    ) t
+    WHERE rn = 1
+) cb ON cb.batch_id = cbt.batch_id
+WHERE cb.start_time > NOW() - INTERVAL '24 hours'
+GROUP BY cb.batch_id, cb.flow_name, cbt.destination_table_name;
+	`
+
+	rows, err := e.db.Query(context.Background(), query)
+	if err != nil {
+		return fmt.Errorf("failed to query table metrics: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var batchID, flowName, tableName string
+		var totalRows int64
+
+		err := rows.Scan(&batchID, &flowName, &tableName, &totalRows)
+		if err != nil {
+			log.Printf("Error scanning table metrics row: %v", err)
+			continue
+		}
+
+		key := fmt.Sprintf("%s|%s|%s", batchID, flowName, tableName)
+		lastTotal := e.lastReportedTotals[key]
+		delta := totalRows - lastTotal
+
+		if delta > 0 {
+			e.rowsSynced.WithLabelValues(batchID, flowName, tableName).Add(float64(delta))
+			e.lastReportedTotals[key] = totalRows
+		}
+	}
+
+	return rows.Err()
+}
+
 func (e *PeerDBExporter) collectSlotSizeMetrics() error {
 	// Use peer_slot_size for replication slot lag
 	query := `
@@ -424,6 +485,10 @@ func (e *PeerDBExporter) CollectMetrics() error {
 
 	if err := e.collectTableMetrics(); err != nil {
 		return fmt.Errorf("failed to collect table metrics: %w", err)
+	}
+
+	if err := e.collectSyncedRows24Hours(); err != nil {
+		return fmt.Errorf("failed to collect synced rows in 24 hours metrics: %w", err)
 	}
 
 	if err := e.collectSlotSizeMetrics(); err != nil {
