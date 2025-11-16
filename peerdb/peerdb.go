@@ -404,7 +404,6 @@ func (e *PeerDBExporter) collectFlowErrors() error {
 			error_timestamp
 		FROM
 			peerdb_stats.flow_errors
-		WHERE ack IS NULL
 	`
 
 	rows, err := e.db.Query(context.Background(), query)
@@ -465,7 +464,7 @@ func (e *PeerDBExporter) collectPeers() error {
 	query := `
 		SELECT
 			name,
-			type
+			type,
 		FROM
 			public.peers
 	`
