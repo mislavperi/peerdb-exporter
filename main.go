@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"time"
 
 	"github.com/dogmatiq/ferrite"
@@ -38,6 +39,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.Handle("/metrics", promhttp.Handler())
+	mux.Handle("/debug/", http.DefaultServeMux)
 	mux.HandleFunc("/health", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
