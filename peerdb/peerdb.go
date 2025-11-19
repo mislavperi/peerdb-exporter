@@ -415,8 +415,9 @@ func (e *PeerDBExporter) collectFlowErrors() error {
 
 	for rows.Next() {
 		var flowName, errorMessage, errorType string
+		var errorTimestamp time.Time
 
-		err := rows.Scan(&flowName, &errorMessage, &errorType)
+		err := rows.Scan(&flowName, &errorMessage, &errorType, &errorTimestamp)
 		if err != nil {
 			log.Printf("Error scanning for flow errors: %v", err)
 			continue
@@ -464,7 +465,7 @@ func (e *PeerDBExporter) collectPeers() error {
 	query := `
 		SELECT
 			name,
-			type,
+			type
 		FROM
 			public.peers
 	`
