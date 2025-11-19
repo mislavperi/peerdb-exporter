@@ -223,57 +223,57 @@ LIMIT 500;
 	return rows.Err()
 }
 
-func (e *PeerDBExporter) collectTableMetrics() error {
-	query := `
-SELECT
-		cb.batch_id,
-    cb.flow_name,
-    cbt.destination_table_name,
-    COALESCE(SUM(cbt.num_rows), 0) AS total_rows
-FROM peerdb_stats.cdc_batch_table cbt
-JOIN (
-    SELECT batch_id, flow_name, start_time
-    FROM (
-        SELECT
-            batch_id,
-            flow_name,
-            start_time,
-            ROW_NUMBER() OVER (PARTITION BY batch_id ORDER BY start_time DESC) AS rn
-        FROM peerdb_stats.cdc_batches
-    ) t
-    WHERE rn = 1
-) cb ON cb.batch_id = cbt.batch_id
-GROUP BY cb.batch_id, cb.flow_name, cbt.destination_table_name;
-	`
-
-	rows, err := e.db.Query(context.Background(), query)
-	if err != nil {
-		return fmt.Errorf("failed to query table metrics: %w", err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var batchID, flowName, tableName string
-		var totalRows int64
-
-		err := rows.Scan(&batchID, &flowName, &tableName, &totalRows)
-		if err != nil {
-			log.Printf("Error scanning table metrics row: %v", err)
-			continue
-		}
-
-		key := fmt.Sprintf("%s|%s|%s", batchID, flowName, tableName)
-		lastTotal := e.lastReportedTotals[key]
-		delta := totalRows - lastTotal
-
-		if delta > 0 {
-			e.rowsSynced.WithLabelValues(batchID, flowName, tableName).Add(float64(delta))
-			e.lastReportedTotals[key] = totalRows
-		}
-	}
-
-	return rows.Err()
-}
+// func (e *PeerDBExporter) collectTableMetrics() error {
+// 	query := `
+// SELECT
+// 		cb.batch_id,
+//     cb.flow_name,
+//     cbt.destination_table_name,
+//     COALESCE(SUM(cbt.num_rows), 0) AS total_rows
+// FROM peerdb_stats.cdc_batch_table cbt
+// JOIN (
+//     SELECT batch_id, flow_name, start_time
+//     FROM (
+//         SELECT
+//             batch_id,
+//             flow_name,
+//             start_time,
+//             ROW_NUMBER() OVER (PARTITION BY batch_id ORDER BY start_time DESC) AS rn
+//         FROM peerdb_stats.cdc_batches
+//     ) t
+//     WHERE rn = 1
+// ) cb ON cb.batch_id = cbt.batch_id
+// GROUP BY cb.batch_id, cb.flow_name, cbt.destination_table_name;
+// 	`
+//
+// 	rows, err := e.db.Query(context.Background(), query)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to query table metrics: %w", err)
+// 	}
+// 	defer rows.Close()
+//
+// 	for rows.Next() {
+// 		var batchID, flowName, tableName string
+// 		var totalRows int64
+//
+// 		err := rows.Scan(&batchID, &flowName, &tableName, &totalRows)
+// 		if err != nil {
+// 			log.Printf("Error scanning table metrics row: %v", err)
+// 			continue
+// 		}
+//
+// 		key := fmt.Sprintf("%s|%s|%s", batchID, flowName, tableName)
+// 		lastTotal := e.lastReportedTotals[key]
+// 		delta := totalRows - lastTotal
+//
+// 		if delta > 0 {
+// 			e.rowsSynced.WithLabelValues(batchID, flowName, tableName).Add(float64(delta))
+// 			e.lastReportedTotals[key] = totalRows
+// 		}
+// 	}
+//
+// 	return rows.Err()
+// }
 
 func (e *PeerDBExporter) collectSyncedRows24Hours() error {
 	query := `
@@ -531,9 +531,9 @@ func (e *PeerDBExporter) CollectMetrics() error {
 		return fmt.Errorf("failed to collect batch metrics: %w", err)
 	}
 
-	if err := e.collectTableMetrics(); err != nil {
-		return fmt.Errorf("failed to collect table metrics: %w", err)
-	}
+	// if err := e.collectTableMetrics(); err != nil {
+	// 	return fmt.Errorf("failed to collect table metrics: %w", err)
+	// }
 
 	if err := e.collectSyncedRows24Hours(); err != nil {
 		return fmt.Errorf("failed to collect synced rows in 24 hours metrics: %w", err)
