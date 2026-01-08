@@ -414,16 +414,16 @@ func (e *PeerDBExporter) collectFlowErrors() error {
 	defer rows.Close()
 
 	for rows.Next() {
-		var flowName, errorMessage, errorType string
+		var flowName, errorType string
 		var errorTimestamp time.Time
 
-		err := rows.Scan(&flowName, &errorMessage, &errorType, &errorTimestamp)
+		err := rows.Scan(&flowName, &errorType, &errorTimestamp)
 		if err != nil {
 			log.Printf("Error scanning for flow errors: %v", err)
 			continue
 		}
 
-		e.flowErrors.WithLabelValues(flowName, errorMessage, errorType)
+		e.flowErrors.WithLabelValues(flowName, errorType)
 	}
 
 	return rows.Err()
