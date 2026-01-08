@@ -67,7 +67,7 @@ func NewPeerDBExporter(pgpool *pgxpool.Pool) *PeerDBExporter {
 				Name: "peerdb_flow_errors_total",
 				Help: "Total number of flow errors",
 			},
-			[]string{"flow_name", "error_type", "error_timestamp"},
+			[]string{"flow_name", "error_type"},
 		),
 		flows: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
@@ -400,7 +400,6 @@ func (e *PeerDBExporter) collectFlowErrors() error {
 		SELECT
 			flow_name,
 			error_type,
-			error_timestamp
 		FROM
 			peerdb_stats.flow_errors
 	`
@@ -414,9 +413,8 @@ func (e *PeerDBExporter) collectFlowErrors() error {
 
 	for rows.Next() {
 		var flowName, errorType string
-		var errorTimestamp time.Time
 
-		err := rows.Scan(&flowName, &errorType, &errorTimestamp)
+		err := rows.Scan(&flowName, &errorType)
 		if err != nil {
 			log.Printf("Error scanning for flow errors: %v", err)
 			continue
