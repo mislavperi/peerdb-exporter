@@ -399,7 +399,6 @@ func (e *PeerDBExporter) collectFlowErrors() error {
 	query := `
 		SELECT
 			flow_name,
-			error_message,
 			error_type,
 			error_timestamp
 		FROM
